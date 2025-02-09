@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { formatUnits } from 'ethers';
+import { formatEther, parseUnits, getBigInt } from 'ethers';
 import { Button } from '@/components/ui/button'; // Your UI button component (or use OnchainKit’s if available)
 import { NostraTokenAddress, StakingContractAddress, NostraTokenABI, StakingContractABI } from './address-abi';
 import { WalletComponents } from '@/components/buttons/walletConnect'; // Your wallet connection components
@@ -84,7 +84,7 @@ export default function Dashboard() {
       {/* Only render wallet-dependent UI when wallet is connected */}
       
         <>
-          {/* --- Top Bar: Wallet Connection & Unstake Button --- */}
+          {/* --- Top Bar: Wallet Connection Button --- */}
           <div className="items-center justify-center gap-4">
             <div className="fixed top-8 right-6 p-0 z-0 text-right">
               <WalletComponents />
@@ -94,12 +94,10 @@ export default function Dashboard() {
           {/* --- Always-Visible Information --- */}
           <div className="absolute top-48 right-10 text-right rounded border-l-4 p-4
             bg-black shadow-lg text-center border border-gray-300">
-            <p className="text-l">
-              <strong>Staked Balance:</strong> {formatUnits(stakedBalance, 18)} NST
-            </p>
-            <p className="text-l">
-              <strong>Available to Unstake:</strong> {formatUnits(availableBalance, 18)} NST
-            </p>
+            <div className="">
+              <p>Token Balance: {formatEther(tokenBalance)} NST</p>
+              <p>Available to Unstake: {formatEther(availableBalance)} NST</p>
+            </div>
           </div>
 
           {/* --- Main Content: Either Mint/Stake or Chat Card --- */}
@@ -122,7 +120,7 @@ export default function Dashboard() {
                 {/* Mrs. Beauty Chat Card */}
                 <h2 className="text-2xl font-bold mb-4 text-center">MrsBeauty Chat</h2>
                 <p className="mb-4 text-center text-xl">
-                  Your Staked Balance: {formatUnits(stakedBalance, 18)} NST
+                  Your Staked Balance: {formatEther(stakedBalance)} NST
                 </p>
                 {/* Render the chat interface */}
                 <AgentRoute />

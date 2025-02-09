@@ -12,12 +12,13 @@ export default function StakeUnstake() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [tokenBalance, setTokenBalance] = useState<ethers.BigNumberish>(BigInt(0));
   const [availableStakes, setAvailableStakes] = useState<ethers.BigNumberish>(BigInt(0));
+  const [stakedBalance, setStakedBalance] = useState<ethers.BigNumberish>(BigInt(0));
   const [allowance, setAllowance] = useState<ethers.BigNumberish>(BigInt(0));
   const [isStaking, setIsStaking] = useState(false);
   const [isUnstaking, setIsUnstaking] = useState(false);
   const [stakeAmount, setStakeAmount] = useState(''); // User input for stake amount
 
-  // Initialize the ethers provider (assumes a wallet extension is installed)
+  // Initialize ethers provider (assumes a wallet extension like MetaMask or Coinbase Wallet is installed)
   const provider = new ethers.BrowserProvider(window.ethereum);
 
   // Check for wallet connection and set userAddress.
@@ -35,25 +36,24 @@ export default function StakeUnstake() {
     checkConnection();
   }, []);
 
-  // Fetch token balance, staking info, and allowance from the contracts.
+  // Fetch token balance, allowance, and staking info from the contracts.
   async function fetchBalances() {
     if (!userAddress) return;
     try {
       const signer = await provider.getSigner();
-      
-      // Token contract: get balance and allowance
+
+      // Token contract: get balance and allowance.
       const tokenContract = new ethers.Contract(NostraTokenAddress, NostraTokenABI, signer);
       const balance = await tokenContract.balanceOf(userAddress);
       setTokenBalance(balance);
-      
-      // Fetch allowance for the staking contract.
       const approved = await tokenContract.allowance(userAddress, StakingContractAddress);
       setAllowance(approved);
 
-      // Staking contract: get player's available stakes.
+      // Staking contract: get player's staking info.
       const stakingContract = new ethers.Contract(StakingContractAddress, StakingContractABI, signer);
       const playerData = await stakingContract.players(userAddress);
       setAvailableStakes(playerData.availableStakes);
+      setStakedBalance(playerData.unavailableStakes);
     } catch (error) {
       console.error("Error fetching balances:", error);
     }
@@ -65,6 +65,12 @@ export default function StakeUnstake() {
     }
   }, [userAddress, isStaking, isUnstaking]);
 
+  // If the user has already staked tokens (stakedBalance > 0), hide this UI.
+  if (getBigInt(stakedBalance) > BigInt(0)) {
+    // Optionally, you could render an alternative UI (e.g. a chat card) here.
+    return null;
+  }
+
   // handleApprove: Approve the staking contract to spend a user-specified amount of tokens.
   async function handleApprove() {
     if (!userAddress) return;
@@ -72,7 +78,6 @@ export default function StakeUnstake() {
       alert("Please enter a valid amount to approve.");
       return;
     }
-    // Convert the stake amount (assumed in token units) to wei (18 decimals).
     const amountToApprove = parseUnits(stakeAmount, 18);
     try {
       const signer = await provider.getSigner();
@@ -99,7 +104,6 @@ export default function StakeUnstake() {
       alert("Insufficient token balance to stake that amount.");
       return;
     }
-    // Check if allowance is sufficient.
     if (getBigInt(allowance) < getBigInt(amountToStake)) {
       alert("Please approve the staking contract to spend your tokens first.");
       return;
@@ -111,7 +115,7 @@ export default function StakeUnstake() {
       const tx = await stakingContract.stake(amountToStake);
       await tx.wait();
       alert("Staking successful!");
-      setStakeAmount(''); // Clear input after staking
+      setStakeAmount('');
     } catch (error) {
       console.error("Staking failed:", error);
       alert("Staking failed. Check the console for details.");
@@ -145,22 +149,17 @@ export default function StakeUnstake() {
   }
 
   return (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center rounded-lg border border-gray bg-pink-300 text-black gap-5 p-4">
+    <div className="flex flex-col items-center gap-5 p-4">
       <h2 className="text-2xl font-bold">Stake / Unstake Tokens</h2>
       {userAddress ? (
         <>
-            <div className='text-lg p-2 rounded-lg bg-violet-300'>
-               
-                <p className="">
-                    Token Balance: {formatEther(tokenBalance)} NST
-                </p>
-                <p className="">
-                    Available to Unstake: {formatEther(availableStakes)} NST
-                </p>
-            </div>
+          <div className="text-lg p-2 rounded-lg bg-violet-300">
+            <p>Token Balance: {formatEther(tokenBalance)} NST</p>
+            <p>Available to Unstake: {formatEther(availableStakes)} NST</p>
+          </div>
 
           {/* Input field for user to enter stake amount */}
-          <div className="mt-2 text-white">
+          <div className="mt-2">
             <input
               type="number"
               placeholder="Enter amount to stake"
